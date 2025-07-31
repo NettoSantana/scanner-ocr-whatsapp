@@ -8,7 +8,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def index():
-    return "API OCR rodando 100%"
+    return "API OCR rodando 101%"
 
 
 @app.route("/upload", methods=["POST"])
