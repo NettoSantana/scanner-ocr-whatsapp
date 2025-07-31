@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 import os
+from separar_renomear import processar_pdf
 
 app = Flask(__name__)
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
-def home():
-    return "✅ API OCR rodando no Railway!"
+def index():
+    return "API OCR rodando"
 
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -13,12 +16,14 @@ def upload_pdf():
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
 
     file = request.files["file"]
-    filename = file.filename
-    save_path = os.path.join("uploads", filename)
-    os.makedirs("uploads", exist_ok=True)
-    file.save(save_path)
+    if file.filename == "":
+        return jsonify({"error": "Nome de arquivo inválido"}), 400
 
-    # Aqui você chamaria sua função de OCR e separação com base no arquivo salvo
-    # Exemplo: processar_documento(save_path)
+    filepath = os.path.join(UPLOAD_FOLDER, "documento.pdf")
+    file.save(filepath)
 
-    return
+    arquivos_gerados = processar_pdf(filepath)
+    return jsonify({"status": "sucesso", "arquivos": arquivos_gerados}), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
