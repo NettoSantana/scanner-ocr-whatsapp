@@ -2,5 +2,5 @@ flask
 pytesseract
 pdf2image
 pillow
-PyPDF2
+PyPDF2 
 
