@@ -5,56 +5,49 @@ from PyPDF2 import PdfReader, PdfWriter
 import os
 import re
 
-# Caminhos
-PDF = "documento.pdf"
-POPPLER = r"C:\Users\vlula\Downloads\Release-24.08.0-0\poppler-24.08.0\Library\bin"
-TESSERACT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Caminhos fixos
+POPPLER = r"/usr/bin"  # Railway vai rodar com poppler instalado no container Linux
+TESSERACT = r"/usr/bin/tesseract"
 
 pytesseract.pytesseract.tesseract_cmd = TESSERACT
 
-# Cria pasta de saída
-os.makedirs("documentos_processados", exist_ok=True)
+def processar_pdf(caminho_pdf):
+    documentos = []
+    pasta_saida = "documentos_processados"
+    os.makedirs(pasta_saida, exist_ok=True)
 
-# Carrega o PDF original
-reader = PdfReader(PDF)
+    reader = PdfReader(caminho_pdf)
+    pages_images = convert_from_path(caminho_pdf, poppler_path=POPPLER)
 
-# Converte para imagens (OCR)
-pages_images = convert_from_path(PDF, poppler_path=POPPLER)
+    for i, (pdf_page, img_page) in enumerate(zip(reader.pages, pages_images)):
+        img_path = f"pagina_{i+1}.png"
+        img_page.save(img_path, "PNG")
+        texto = pytesseract.image_to_string(Image.open(img_path), lang='por')
 
-for i, (pdf_page, img_page) in enumerate(zip(reader.pages, pages_images)):
-    # OCR
-    img_path = f"pagina_{i+1}.png"
-    img_page.save(img_path, "PNG")
-    texto = pytesseract.image_to_string(Image.open(img_path), lang='por')
+        texto_limpo = texto.replace("\n", " ").upper()
 
-    # Limpa o texto pra evitar erros de leitura
-    texto_limpo = texto.replace("\n", " ").upper()
+        tipo = "DOC"
+        if "NF" in texto_limpo or "NOTA FISCAL" in texto_limpo:
+            tipo = "NF"
+        elif "BOLETO" in texto_limpo:
+            tipo = "BL"
+        elif "CTE" in texto_limpo or "CONHECIMENTO DE TRANSPORTE" in texto_limpo:
+            tipo = "CTE"
 
-    # Extrair tipo de documento
-    tipo = "DOC"
-    if "NF" in texto_limpo or "NOTA FISCAL" in texto_limpo:
-        tipo = "NF"
-    elif "BOLETO" in texto_limpo:
-        tipo = "BL"
-    elif "CTE" in texto_limpo or "CONHECIMENTO DE TRANSPORTE" in texto_limpo:
-        tipo = "CTE"
+        match_numero = re.search(r"\b\d{6,}\b", texto_limpo)
+        numero = match_numero.group(0) if match_numero else f"{i+1:03}"
 
-    # Extrair número do documento (6+ dígitos)
-    match_numero = re.search(r"\b\d{6,}\b", texto_limpo)
-    numero = match_numero.group(0) if match_numero else f"{i+1:03}"
+        match_nome = re.search(r"\b[A-Z]{5,}\b", texto_limpo)
+        fornecedor = match_nome.group(0) if match_nome else f"FORNECEDOR_{i+1:03}"
 
-    # Extrair “fornecedor” (primeira palavra com 5+ letras maiúsculas)
-    match_nome = re.search(r"\b[A-Z]{5,}\b", texto_limpo)
-    fornecedor = match_nome.group(0) if match_nome else f"FORNECEDOR_{i+1:03}"
+        nome_arquivo = f"{fornecedor}_{tipo}_{numero}.pdf"
+        caminho_arquivo = os.path.join(pasta_saida, nome_arquivo)
 
-    # Nome final do arquivo
-    nome_arquivo = f"{fornecedor}_{tipo}_{numero}.pdf"
+        writer = PdfWriter()
+        writer.add_page(pdf_page)
+        with open(caminho_arquivo, "wb") as f:
+            writer.write(f)
 
-    # Criar novo PDF só com essa página
-    writer = PdfWriter()
-    writer.add_page(pdf_page)
+        documentos.append(nome_arquivo)
 
-    with open(os.path.join("documentos_processados", nome_arquivo), "wb") as f:
-        writer.write(f)
-
-    print(f"✅ Página {i+1} salva como: {nome_arquivo}")
+    return documentos
