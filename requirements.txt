@@ -1,6 +1,5 @@
-flask
+Flask
+PyMuPDF
 pytesseract
-pdf2image
 pillow
-PyPDF2 
-
+waitress
