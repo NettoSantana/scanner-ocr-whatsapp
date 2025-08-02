@@ -1,8 +1,2 @@
 Flask
-PyMuPDF
-pytesseract
-pillow
-waitress
-pdf2image
-PyPDF2
 twilio
