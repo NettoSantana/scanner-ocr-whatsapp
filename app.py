@@ -1,44 +1,47 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from separar_renomear import processar_pdf
-import os
 import requests
+import os
+from separar_renomear import processar_pdf
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET"])
 def index():
-    return "✅ API OCR rodando"
+    return "API OCR rodando 101.1%"
 
 @app.route("/bot", methods=["POST"])
 def bot():
     msg = request.values.get("Body", "").strip().lower()
-    num_media = int(request.values.get("NumMedia", 0))
+    media_url = request.values.get("MediaUrl0", "")
+    media_type = request.values.get("MediaContentType0", "")
     response = MessagingResponse()
 
-    if num_media > 0:
-        media_url = request.values.get("MediaUrl0")
-        media_type = request.values.get("MediaContentType0")
+    if media_type == "application/pdf" and media_url:
+        # Etapa 1 – Aviso imediato
+        response.message("🕐 Arquivo recebido. Iniciando OCR... Isso pode levar alguns segundos.")
+        pdf_path = "documento_recebido.pdf"
+        try:
+            # Baixa o PDF
+            pdf_bytes = requests.get(media_url).content
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_bytes)
 
-        if media_type == "application/pdf":
-            try:
-                os.makedirs("documentos", exist_ok=True)
-                caminho = "documentos/entrada.pdf"
-                r = requests.get(media_url)
-                with open(caminho, "wb") as f:
-                    f.write(r.content)
+            # Processa o PDF
+            resultado = processar_pdf(pdf_path)
 
-                # Envia mensagem de status enquanto processa
-                response.message("📥 PDF recebido! Processando OCR... Aguarde a resposta.")
-                resultado = processar_pdf(caminho)
-                print("✅ OCR concluído:", resultado)
-            except Exception as e:
-                print("❌ Erro ao processar o PDF:", e)
-                response.message("⚠️ Erro ao processar o PDF. Tente novamente.")
-        else:
-            response.message("❌ Arquivo não suportado. Envie um PDF.")
+            # Envia resultado
+            follow_up = MessagingResponse()
+            follow_up.message(f"✅ OCR finalizado!\n\n{resultado}")
+            os.remove(pdf_path)
+            return str(follow_up)
+        except Exception as e:
+            error = MessagingResponse()
+            error.message(f"❌ Erro ao processar o PDF: {str(e)}")
+            return str(error)
+
     elif "teste" in msg:
-        response.message("👋 Teste ok! Envie um PDF para iniciarmos o OCR.")
+        response.message("👋 Olá! Envie um PDF para iniciarmos o OCR.")
     else:
         response.message("📌 Ainda não sei o que fazer com essa mensagem. Envie um PDF.")
 
