@@ -18,27 +18,22 @@ def bot():
     response = MessagingResponse()
 
     if media_type == "application/pdf" and media_url:
-        # Etapa 1 – Aviso imediato
-        response.message("🕐 Arquivo recebido. Iniciando OCR... Isso pode levar alguns segundos.")
         pdf_path = "documento_recebido.pdf"
         try:
-            # Baixa o PDF
+            # Baixar o PDF
             pdf_bytes = requests.get(media_url).content
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
 
-            # Processa o PDF
+            # Processar o PDF
             resultado = processar_pdf(pdf_path)
 
-            # Envia resultado
-            follow_up = MessagingResponse()
-            follow_up.message(f"✅ OCR finalizado!\n\n{resultado}")
+            # Responder com status + resultado
+            msg = response.message()
+            msg.body(f"✅ OCR finalizado com sucesso!\n\n{resultado}")
             os.remove(pdf_path)
-            return str(follow_up)
         except Exception as e:
-            error = MessagingResponse()
-            error.message(f"❌ Erro ao processar o PDF: {str(e)}")
-            return str(error)
+            response.message(f"❌ Erro ao processar o PDF: {str(e)}")
 
     elif "teste" in msg:
         response.message("👋 Olá! Envie um PDF para iniciarmos o OCR.")
