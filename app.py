@@ -3,6 +3,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 import requests
 import os
 from separar_renomear import processar_pdf
+from waitress import serve
 
 app = Flask(__name__)
 
@@ -18,23 +19,29 @@ def bot():
     response = MessagingResponse()
 
     if media_type == "application/pdf" and media_url:
-        # Etapa 1 – Aviso imediato
         response.message("🕐 Arquivo recebido. Iniciando OCR... Isso pode levar alguns segundos.")
         pdf_path = "documento_recebido.pdf"
+
         try:
-            # Baixa o PDF
+            # Baixa PDF
             pdf_bytes = requests.get(media_url).content
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
 
-            # Processa o PDF
-            resultado = processar_pdf(pdf_path)
-
-            # Envia resultado
+            # Processa o PDF e gera arquivos renomeados
+            resultados = processar_pdf(pdf_path)
             follow_up = MessagingResponse()
-            follow_up.message(f"✅ OCR finalizado!\n\n{resultado}")
+
+            if not resultados:
+                follow_up.message("⚠️ Nenhum arquivo foi gerado.")
+            else:
+                for arquivo in resultados:
+                    nome = os.path.basename(arquivo)
+                    follow_up.message(f"📄 Arquivo gerado: {nome}")
+
             os.remove(pdf_path)
             return str(follow_up)
+
         except Exception as e:
             error = MessagingResponse()
             error.message(f"❌ Erro ao processar o PDF: {str(e)}")
@@ -46,8 +53,6 @@ def bot():
         response.message("📌 Ainda não sei o que fazer com essa mensagem. Envie um PDF.")
 
     return str(response)
-
-from waitress import serve
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
