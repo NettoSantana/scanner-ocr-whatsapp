@@ -4,6 +4,5 @@ pytesseract
 pillow
 waitress
 pdf2image
-pdf2image
 PyPDF2
 twilio
