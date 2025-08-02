@@ -2,6 +2,7 @@ from flask import Flask, request
 from separar_renomear import processar_pdf
 from twilio.twiml.messaging_response import MessagingResponse
 import os
+from waitress import serve
 
 app = Flask(__name__)
 
@@ -22,4 +23,4 @@ def bot():
     return str(response)
 
 if __name__ == "__main__":
-    app.run()
+    serve(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
