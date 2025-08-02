@@ -30,6 +30,7 @@ def bot():
 
             # Processa o PDF e gera arquivos renomeados
             resultados = processar_pdf(pdf_path)
+            print("ARQUIVOS GERADOS:", resultados)
             follow_up = MessagingResponse()
 
             if not resultados:
